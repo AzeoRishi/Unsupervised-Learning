@@ -1,0 +1,97 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+
+def preprocess_data(df):
+    # Assuming the target variable is in the last column
+    X = df.iloc[:, :-1].values
+    y = df.iloc[:, -1].values
+    
+    # Perform any necessary preprocessing steps, such as feature scaling or encoding categorical variables
+    
+    return X, y
+
+
+def train_test_split(X, y, test_size=0.2, random_state=None):
+    # Split the data into train and test sets
+    if random_state is not None:
+        np.random.seed(random_state)
+    
+    indices = np.arange(len(X))
+    np.random.shuffle(indices)
+    
+    train_size = int((1 - test_size) * len(X))
+    X_train = X[indices[:train_size]]
+    y_train = y[indices[:train_size]]
+    X_test = X[indices[train_size:]]
+    y_test = y[indices[train_size:]]
+    
+    return X_train, X_test, y_train, y_test
+
+
+def calculate_prior_probabilities(y):
+    # Calculate the prior probabilities of each class
+    classes, counts = np.unique(y, return_counts=True)
+    probabilities = counts / len(y)
+    
+    return classes, probabilities
+
+
+def calculate_likelihood(X_train, y_train):
+    # Calculate the likelihood probabilities for each feature and class combination
+    n_features = X_train.shape[1]
+    classes = np.unique(y_train)
+    n_classes = len(classes)
+    
+    likelihood = np.zeros((n_classes, n_features))
+    
+    for i, cls in enumerate(classes):
+        X_cls = X_train[y_train == cls]
+        likelihood[i, :] = np.mean(X_cls, axis=0)
+    
+    return likelihood
+
+
+def calculate_posterior_probabilities(X_test, prior, likelihood):
+    # Calculate the posterior probabilities for each test instance and class
+    n_classes, n_features = likelihood.shape
+    n_test = X_test.shape[0]
+    
+    posteriors = np.zeros((n_test, n_classes))
+    
+    for i in range(n_test):
+        for j in range(n_classes):
+            likelihood_prob = np.prod(likelihood[j, :] ** X_test[i, :] * (1 - likelihood[j, :]) ** (1 - X_test[i, :]))
+            posteriors[i, j] = prior[j] * likelihood_prob
+    
+    return posteriors
+
+
+def predict(posteriors):
+    # Predict the class label for each test instance based on the posterior probabilities
+    return np.argmax(posteriors, axis=1)
+
+
+def accuracy(y_true, y_pred):
+    # Calculate the accuracy of the predictions
+    return np.sum(y_true == y_pred) / len(y_true)
+
+
+def naive_bayes(x_train, y_train, x_test, y_test):
+    classes, prior = calculate_prior_probabilities(y_train)
+    likelihood = calculate_likelihood(x_train, y_train)
+    posteriors = calculate_posterior_probabilities(x_test, prior, likelihood)
+    y_pred = predict(posteriors)
+    
+    acc = accuracy(y_test, y_pred)
+    return acc
+
+
+def euclidean_distance(x1, x2):
+    # Calculate the Euclidean distance between two data points
+    return np.sqrt(np.sum((x1 - x2) ** 2))
+
+
+def knn(x_train, y_train, x_test, y_test, k):
+    n_test = x_test
